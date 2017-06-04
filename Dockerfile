@@ -36,6 +36,20 @@ RUN cd /build/openresty-1.11.2.3/bundle/ngx_lua-0.10.8 \
 # Compile and install openresty
 RUN cd /build/openresty-1.11.2.3 \
     && ./configure \
+        --with-cc-opt='-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2' \
+        --with-ld-opt='-Wl,-z,relro -Wl,-z,now' \
+        --with-http_stub_status_module \
+        --with-http_realip_module \
+        --with-http_auth_request_module \
+        --with-http_slice_module \
+        --with-threads \
+        --with-http_addition_module \
+        --with-http_gunzip_module \
+        --with-http_gzip_static_module \
+        --with-http_random_index_module \
+        --with-http_secure_link_module \
+        --with-http_sub_module \
+        --with-stream_ssl_module \
         --with-pcre-jit \
         --with-ipv6 \
         --with-http_v2_module \
