@@ -1,4 +1,4 @@
-FROM ubuntu:trusty
+FROM debian:stretch
 
 # Required system packages
 RUN apt-get update \
@@ -6,7 +6,8 @@ RUN apt-get update \
         libreadline6-dev \
         libncurses5-dev \
         libpcre3-dev \
-        libssl-dev \
+        libssl1.0-dev \
+        zlib1g-dev \
         perl \
         make \
         build-essential \
@@ -80,7 +81,8 @@ RUN fpm -s dir -t deb \
     --category httpd \
     --maintainer 'Nick Sitarz <nick@tapstream.com>' \
     --depends libpcre3 \
-    --depends libssl1.0.0 \
+    --depends libssl1.0.2 \
+    --depends zlib1g \
     --deb-build-depends build-essential \
     --replaces 'nginx-full' \
     --provides 'nginx-full' \
