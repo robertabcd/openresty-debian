@@ -26,6 +26,13 @@ RUN wget https://openresty.org/download/openresty-1.11.2.3.tar.gz \
     && tar xfz openresty-1.11.2.3.tar.gz
 
 
+# recevieatmost patch.
+COPY patch/atmost.patch /build/atmost.patch
+
+RUN cd /build/openresty-1.11.2.3/bundle/ngx_lua-0.10.8 \
+    && patch -p1 < /build/atmost.patch
+
+
 # Compile and install openresty
 RUN cd /build/openresty-1.11.2.3 \
     && ./configure \
