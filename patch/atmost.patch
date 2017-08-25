@@ -1,11 +1,11 @@
-commit 1079d4ce9b02a24ecb6ea107e5edc9e6bd0d267f
+commit f845794ea13741de29e8ca6fdae73509e3db2896
 Author: Robert <robert@arctic.tw>
-Date:   Sat Jun 3 18:27:09 2017 +0800
+Date:   Fri Aug 25 13:20:30 2017 +0800
 
     Add receiveatmost.
 
 diff --git a/src/ngx_http_lua_socket_tcp.c b/src/ngx_http_lua_socket_tcp.c
-index 49811168..53f4a82d 100644
+index 9eda286b..93f3d3a5 100644
 --- a/src/ngx_http_lua_socket_tcp.c
 +++ b/src/ngx_http_lua_socket_tcp.c
 @@ -23,7 +23,10 @@ static int ngx_http_lua_socket_tcp_connect(lua_State *L);
@@ -19,7 +19,7 @@ index 49811168..53f4a82d 100644
  static int ngx_http_lua_socket_tcp_send(lua_State *L);
  static int ngx_http_lua_socket_tcp_close(lua_State *L);
  static int ngx_http_lua_socket_tcp_setoption(lua_State *L);
-@@ -228,11 +231,14 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
+@@ -226,11 +229,14 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
  
      /* {{{req socket object metatable */
      lua_pushlightuserdata(L, &ngx_http_lua_req_socket_metatable_key);
@@ -35,7 +35,7 @@ index 49811168..53f4a82d 100644
      lua_pushcfunction(L, ngx_http_lua_socket_tcp_receiveuntil);
      lua_setfield(L, -2, "receiveuntil");
  
-@@ -250,11 +256,14 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
+@@ -248,11 +254,14 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
  
      /* {{{raw req socket object metatable */
      lua_pushlightuserdata(L, &ngx_http_lua_raw_req_socket_metatable_key);
@@ -51,7 +51,7 @@ index 49811168..53f4a82d 100644
      lua_pushcfunction(L, ngx_http_lua_socket_tcp_receiveuntil);
      lua_setfield(L, -2, "receiveuntil");
  
-@@ -275,7 +284,7 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
+@@ -273,7 +282,7 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
  
      /* {{{tcp object metatable */
      lua_pushlightuserdata(L, &ngx_http_lua_tcp_socket_metatable_key);
@@ -60,7 +60,7 @@ index 49811168..53f4a82d 100644
  
      lua_pushcfunction(L, ngx_http_lua_socket_tcp_connect);
      lua_setfield(L, -2, "connect");
-@@ -290,6 +299,9 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
+@@ -288,6 +297,9 @@ ngx_http_lua_inject_socket_tcp_api(ngx_log_t *log, lua_State *L)
      lua_pushcfunction(L, ngx_http_lua_socket_tcp_receive);
      lua_setfield(L, -2, "receive");
  
@@ -70,7 +70,7 @@ index 49811168..53f4a82d 100644
      lua_pushcfunction(L, ngx_http_lua_socket_tcp_receiveuntil);
      lua_setfield(L, -2, "receiveuntil");
  
-@@ -1708,8 +1720,22 @@ ngx_http_lua_socket_tcp_conn_retval_handler(ngx_http_request_t *r,
+@@ -1709,8 +1721,22 @@ ngx_http_lua_socket_tcp_conn_retval_handler(ngx_http_request_t *r,
  
  
  static int
@@ -93,16 +93,28 @@ index 49811168..53f4a82d 100644
      ngx_http_request_t                  *r;
      ngx_http_lua_socket_tcp_upstream_t  *u;
      ngx_int_t                            rc;
-@@ -1758,6 +1784,8 @@ ngx_http_lua_socket_tcp_receive(lua_State *L)
-         return 2;
-     }
+@@ -1779,6 +1805,12 @@ ngx_http_lua_socket_tcp_receive(lua_State *L)
  
-+    u->fulfill_partial = fulfill_partial;
+         switch (typ) {
+         case LUA_TSTRING:
++            if (fulfill_partial) {
++                p = (char *) lua_pushfstring(L,
++                        "bad pattern argument: receiveatmost accepts a number");
++                return luaL_argerror(L, 2, p);
++            }
 +
-     if (u->request != r) {
-         return luaL_error(L, "bad request");
-     }
-@@ -2323,6 +2351,14 @@ success:
+             pat.data = (u_char *) luaL_checklstring(L, 2, &pat.len);
+             if (pat.len != 2 || pat.data[0] != '*') {
+                 p = (char *) lua_pushfstring(L, "bad pattern argument: %s",
+@@ -1862,6 +1894,7 @@ ngx_http_lua_socket_tcp_receive(lua_State *L)
+ 
+     u->read_waiting = 0;
+     u->read_co_ctx = NULL;
++    u->fulfill_partial = fulfill_partial;
+ 
+     rc = ngx_http_lua_socket_tcp_read(r, u);
+ 
+@@ -2324,6 +2357,14 @@ success:
      }
  #endif
  
@@ -116,6 +128,14 @@ index 49811168..53f4a82d 100644
 +
      if (rev->active) {
          ngx_add_timer(rev, u->read_timeout);
+ 
+@@ -3819,6 +3860,7 @@ ngx_http_lua_socket_receiveuntil_iterator(lua_State *L)
+ 
+     u->read_waiting = 0;
+     u->read_co_ctx = NULL;
++    u->fulfill_partial = 0;
+ 
+     rc = ngx_http_lua_socket_tcp_read(r, u);
  
 diff --git a/src/ngx_http_lua_socket_tcp.h b/src/ngx_http_lua_socket_tcp.h
 index dbdee41c..1b638a29 100644
